@@ -2,7 +2,7 @@
 """
 from ctypes import (
     c_ubyte, c_char_p, c_int, c_uint, c_ulong, c_void_p, Structure,
-    CFUNCTYPE, POINTER
+    CFUNCTYPE, POINTER, c_char
 )
 from enum import IntEnum, unique
 
@@ -67,7 +67,8 @@ class ZBarConfig(IntEnum):
     CFG_ADD_CHECK = 1       # /**< enable check digit when optional */
     CFG_EMIT_CHECK = 2      # /**< return check digit when present */
     CFG_ASCII = 3           # /**< enable full ASCII character set */
-    CFG_NUM = 4             # /**< number of boolean decoder configs */
+    CFG_BINARY = 4          # /**< don't convert binary data to text */
+    CFG_NUM = 5             # /**< number of boolean decoder configs */
 
     CFG_MIN_LEN = 0x20      # /**< minimum data length for valid decode */
     CFG_MAX_LEN = 0x21      # /**< maximum data length for valid decode */
@@ -234,7 +235,7 @@ zbar_symbol_get_data_length = zbar_function(
 
 zbar_symbol_get_data = zbar_function(
     'zbar_symbol_get_data',
-    c_char_p,
+    POINTER(c_char),
     POINTER(zbar_symbol)
 )
 

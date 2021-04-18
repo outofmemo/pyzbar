@@ -1,6 +1,6 @@
 from collections import namedtuple
 from contextlib import contextmanager
-from ctypes import cast, c_void_p, string_at
+from ctypes import cast, c_void_p
 
 from .locations import bounding_box, convex_hull, Point, Rect
 from .pyzbar_error import PyZbarError
@@ -9,7 +9,7 @@ from .wrapper import (
     zbar_image_scanner_create, zbar_image_scanner_destroy,
     zbar_image_create, zbar_image_destroy, zbar_image_set_format,
     zbar_image_set_size, zbar_image_set_data, zbar_scan_image,
-    zbar_image_first_symbol, zbar_symbol_get_data,
+    zbar_image_first_symbol, zbar_symbol_get_data, zbar_symbol_get_data_length,
     zbar_symbol_get_loc_size, zbar_symbol_get_loc_x, zbar_symbol_get_loc_y,
     zbar_symbol_next, ZBarConfig, ZBarSymbol, EXTERNAL_DEPENDENCIES
 )
@@ -97,7 +97,8 @@ def _decode_symbols(symbols):
         Decoded: decoded symbol
     """
     for symbol in symbols:
-        data = string_at(zbar_symbol_get_data(symbol))
+        data = zbar_symbol_get_data(symbol)
+        data = data[:zbar_symbol_get_data_length(symbol)]
         # The 'type' int in a value in the ZBarSymbol enumeration
         symbol_type = ZBarSymbol(symbol.contents.type).name
         polygon = convex_hull(
@@ -167,13 +168,14 @@ def _pixel_data(image):
     return pixels, width, height
 
 
-def decode(image, symbols=None):
+def decode(image, symbols=None, binary=False):
     """Decodes datamatrix barcodes in `image`.
 
     Args:
         image: `numpy.ndarray`, `PIL.Image` or tuple (pixels, width, height)
         symbols: iter(ZBarSymbol) the symbol types to decode; if `None`, uses
             `zbar`'s default behaviour, which is to decode all symbol types.
+        binary: bool If true, do not convert binary data to text.
 
     Returns:
         :obj:`list` of :obj:`Decoded`: The values decoded from barcodes.
@@ -197,6 +199,10 @@ def decode(image, symbols=None):
                 zbar_image_scanner_set_config(
                     scanner, symbol, ZBarConfig.CFG_ENABLE, 1
                 )
+
+        if binary:
+            zbar_image_scanner_set_config(scanner, 0, ZBarConfig.CFG_BINARY, 1)
+
         with _image() as img:
             zbar_image_set_format(img, _FOURCC['L800'])
             zbar_image_set_size(img, width, height)
